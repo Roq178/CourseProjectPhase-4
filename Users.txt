@@ -15,3 +15,14 @@ hhistone|nyla|ADMIN
 cjmsavell|hskpdir|USER
 histone|nyla|ADMIN
 cjmsavell|hskpdir|USER
+cjmsavell | hskpdir | USER
+hhistone | nyla | ADMIN
+cjmsavell | hskpdir | USER
+hhistone | nyla | ADMIN
+cjmsavell | hskpdir | USER
+hhistone | nyla | ADMIN
+cjmsavell | hskpdir | USER
+hhistone | nyla | ADMIN
+cjmsavell | hskpdir | USER
+hhistone | nyla | ADMIN
+cjmsavell | hskpdir | USER

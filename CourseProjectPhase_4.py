@@ -6,84 +6,102 @@ from datetime import datetime
 
 def CreateUsers():
     print('##### create users, passwords, and roles #####')
-    UserFile = open("Users.txt", "a")
-    
-    while True:
-        username = GetUserName()
-        if (username.upper() == "END"):
-            break
-        userpwd = GetUserPassword()
-        userrole = GetUserRole()
-        
-        UserDetail = username + "|" + userpwd + "|" + userrole + "\n"
-        UserFile.write(UserDetail)
-     
-    UserFile.close()
-   
-    
-def GetUserName():
-    return input("Enter user name or 'END'to quit: ")
-
-
-def GetUserPassword():
-    return input("Enter password: ")
-    
-
-def GetUserRole():
-    while True:
-        role = input("Enter role (Admin or User): ").upper()
-        if role in ["ADMIN",  "USER"]:
-            return role
-        else:
-            print("Invalid role. please enter role 'Admin' or 'User': ")
-           
+    with open("Users.txt", "a") as UserFile:
+        while True:
+            username = input("Enter user name or 'END' to quit:  ").strip()
+            if username.upper() == "END":
+                break
+            password = input("Enter password: ").strip()
+            role = input("Enter role (Admin or User): ").strip().upper()
+            if role not in ["ADMIN", "USER"]:
+                print("Invalid role. Enter  'Admin' or 'User'.")
+                continue
+             
+            UserFile.write(f"{username} | {password} | {role}\n")
+         
     
 def Login():
-    UserFile = open("Users.txt", "r")
-    UserName = input("Enter user name: ")
-    UserRole = "None"
+    print("##### Login #####")
+    username = input("Enter user name:  ").strip()
+    password = input("Enter  password: ").strip()
     
-    while True:
-        UserDetail = UserFile.readline()
-        if not UserDetail:
-            return UserRole, UserName
-        
-        UserDetail = UserDetail.replace("\n", "")
-        UserList = UserDetail.split("|")
-        
-        if UserName == UserList[0]:
-            UserRole = UserList[2]
-            return UserRole, UserName
-        
-    return UserRole, UserName
-
-
-def GetEmpName():
-    return input("Enter employee name: ")
-    
-def GetDateWorked():
-    return input("Enter the start date (MM/DD/YYYY):  ")
-
-def GetEndDate():
-    return input("Enter the end date (MM/DD/YYYY): ")
- 
-def GetHoursWorked():
-    return float(input("Enter amount of hours worked:  "))
-        
-def GetHourlyRate():
-    return float(input("Enter hourly rate: "))
-      
+    with open("Users.txt", "r") as UserFile:
+        for line in UserFile:
+            stored_username, stored_password, stored_role = line.strip().split("|")
+            if username == stored_username and password == stored_password:
+                return stored_role, username
+            
+    print("Invalid username or password!")
+    return None, None
   
-def GetTaxRate():
-    return float(input("Enter tax rate:  "))
- 
+
+def  get_valid_date(prompt):
+    """Keep asking for a valid data until entered correctly or 'All'  is provided."""
+    while True:
+        date_input = input(prompt).strip()
+        if date_input.upper() == "ALL":
+            return "ALL"
+        try:
+            return datetime.strptime(date_input, "%m/%d/%y")
+        except ValueError:
+            print("Invalid date formate. Please enter in MM/DD/YYYY format. ")
+                          
  
 def CalcTaxAndNetPay(hours, hourlyrate,taxrate):
      grosspay = hours * hourlyrate
-     incometax =  grosspay * (taxrate / 100)
+     incometax =  grosspay * taxrate
      netpay = grosspay - incometax
      return grosspay, incometax, netpay
+    
+def main():
+    CreateUsers()
+  
+    UserRole, UserName = Login()
+    if UserRole is None:
+        return
+    
+    EmpTotals = {"TotEmp":  0, "TotHours": 0, "TotGrossPay": 0, "TotTax": 0, "TotNetPay":  0}
+                 
+    print("##### Data Entry #####")
+    rundate = get_valid_date("Enrer start date for report MM/DD/YYYY or 'ALL' for all data in file:  ")
+   
+    with open("Employees.txt", "r") as EmpFile:
+        for line in EmpFile:
+            EmpList = line.strip().split("|")
+            if len(EmpList) < 6:
+                 print("Error: Incomplete data in Employees.txt, skipping entry.")
+                 continue
+     
+            try:
+                fromdate = EmpList[0]
+                checkdate = datetime.strptime(fromdate, "%m/%d/%Y")
+                empname = EmpList[2]
+                hours =  float(EmpList[3])
+                hourlyrate = float(EmpList[4])
+                taxrate = float(EmpList[5]) / 100
+            except ValueError:
+                  print(f"Debug: Checking Employees Record -> {EmpList}")  
+                  print(f"Error: Invalid numeric data in Employees.txt -> {EmpList}, skipping entry.")
+                  continue
+     
+            if rundate == "ALL" or checkdate >= rundate:
+                grosspay, incometax, netpay = CalcTaxAndNetPay(hours, hourlyrate, taxrate)
+         
+                print(f"{fromdate} | {EmpList[1]} | {empname} | {hours:.2f} | {hourlyrate:.2f} | {grosspay:,.2f} | {taxrate / 100:.1%} | {incometax:,.2f} | {netpay:,.2f}")
+                 
+                EmpTotals["TotEmp"] += 1
+                EmpTotals["TotHours"] +=  hours
+                EmpTotals["TotGrossPay"] +=  grosspay
+                EmpTotals["TotTax"]  +=  incometax 
+                EmpTotals["TotNetPay"] += netpay
 
+    if EmpTotals["TotEmp"] > 0:
+        PrintTotals(EmpTotals)
+    else:
+         print("No payroll date to display.")
+      
+    input("\nPress any key to continue...")
+  
 def PrintTotals(EmpTotals):
     print("\nTotal  Number of Employees:", EmpTotals["TotEmp"])
     print("Total Hours Worked:", EmpTotals["TotHours"])
@@ -91,88 +109,6 @@ def PrintTotals(EmpTotals):
     print("Total Income Taxe: $", format(EmpTotals["TotTax"], ".2f"))
     print("Total Net Pay: $", format(EmpTotals["TotNetPay"], ".2f"))
     
-def main():
-    CreateUsers()
-    
-    print("##### Data Entry #####")
-    
-    UserRole, UserName = Login()
-    
-    DetailsPrinted = False
-    EmpTotals = {"TotEmp":  0, "TotHours": 0, "TotGrossPay": 0, "TotTax": 0, "TotNetPay":  0}
-    
-    if UserRole is "None":
-        print(UserName, "is invalid.")
-    else:
-        if UserRole.upper() == "ADMIN":
-            EmpFile = open("Employees.txt", "a+")
-            while True:
-                empname = GetEmpName()
-                if empname.upper() == "END":
-                    break
-                
-                fromdate = GetDateWorked()
-                todate = GetEndDate()
-                hours = GetHoursWorked()
-                hourlyrate = GetHourlyRate()
-                taxrate = GetTaxRate()
-                
-                grosspay, incometax, netpay = CalcTaxAndNetPay(hours, hourlyrate, taxrate)
-               
-                EmpDetail = fromdate + "|" + todate + "|" + empname + "|" + str(hours) + "|" + str(hourlyrate) + "|"+ str(taxrate) + "\n"
-                EmpFile.write(EmpDetail)
-                
-            EmpFile.close()
-            
-        print("\n#### Payroll Summary ####")
-        
-        rundate = input("Enter start date for report (MM/DD/YYYY) or 'ALL' for all date in file: ")
-        if rundate.upper() == "ALL":
-            pass
-        else:
-            try:
-                 rundate = datetime.strptime(rundate, "%m/%d?%Y")
-            except ValueError:
-                 print("Invalid date format. Please try again.")
-                 return
-         
-        EmpFile = open("Employees.txt", "r")
-        
-        while True:
-              EmpDetail = EmpFile.readline()
-              if not EmpDetail:
-                  break
-             
-              EmpDetail = EmpDetail.replace("\n", "")
-              EmpList = EmpDetail.split("|")
-         
-              fromdate = EmpList[0]
-              checkdate = datetime.strptime(fromdate,  "%m/%d/%Y")
-         
-              if rundate.upper()  ==  "ALL" or checkdate >= rundate:
-                  empname = EmpList[2]
-                  hours =  float(EmpList[3])
-                  hourlyrate = float(EmpList[4])
-                  taxrate = float(EmpList[5])
-         
-                  grosspay, incometax, netpay = CalcTaxAndNetPay(hours, hourlyrate, taxrate)
-         
-                  print(f"{fromdate} {EmpList[1]} {empname} {hours:6.2f} {hourlyrate:6.2f} {grosspay:8.2f} {taxrate:6.1f}% {incometax:8.2f} {netpay:8.2f}")
-                 
-                  EmpTotals["TotEmp"] += 1
-                  EmpTotals["TotHours"] +=  hours
-                  EmpTotals["TotGrossPay"] +=  grosspay
-                  EmpTotals["TotTax"]  +=  incometax 
-                  EmpTotals["TotNetPay"] += netpay
-        
-        EmpFile.close()
-
-        if EmpTotals["TotEmp"] > 0:
-            PrintTotals(EmpTotals)
-        else:
-             print("No payroll date to display.")
-      
-    input("\nPress any key to continue...")
 
 if __name__ == "__main__":
     main()
